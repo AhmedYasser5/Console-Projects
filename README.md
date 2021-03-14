@@ -1,2 +1,2 @@
 # Console-Projects
-Projects done while at university, aiming to solve different problems
+Project done after the programming basics course
