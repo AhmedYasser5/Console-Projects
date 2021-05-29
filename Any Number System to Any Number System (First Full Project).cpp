@@ -1,244 +1,232 @@
-﻿#include <iostream>
-#include <iomanip>
-#include <cmath>
+#include <iostream>
+#include <algorithm>
+#include <math.h>
+#include <string>
 using namespace std;
-int numbers (char);
-double Decimal ();
-void NonDecimal (double, int);
-void result (int, int[], int, int[], int&);
-void numbers (int, int[], int&);
-void number_sys (int);
-int ct;
-int R;
-int main()
-{
-	double sum;
-	char L;
-	cout<<"How many numbers you want after the radix point?\n";
-	cin>>R;
-	while (R<0)
-	{
-		cout<<"Enter a valid number:\n";
-		cin>>R;
+//	Adding two numbers (x & y) in a certain base (base)
+string add(string x, const string &y, const long long base = 10) {
+	unsigned int size = y.size(), carry = 0;
+	for (unsigned int i = 0; i < size; i++) {
+		while (x.size() <= i)
+			x += char(0);
+		x[i] += carry + y[i];
+		carry = x[i] / base;
+		x[i] %= base;
 	}
-	do{
-		sum=Decimal();
-		if (ct==10) cout<<setprecision(R)<<fixed<<sum;
-		else if (ct!=10) NonDecimal(sum, ct);
-		cout<<"\n\nDo you have another number to convert? Enter \'y\' for yes and \'n\' for no:\n";
-		cin>>L;
-		while (L!='y' && L!='n')
-		{
-			cout<<"Enter a valid answer --> ";
-			cin>>L;
-		}
-	} while (L=='y');
-	cout<<"\nThank you for trusting the app! :)";
-	return 0;
+	while (carry) {
+		while (size >= x.size())
+			x += char(0);
+		x[size] += carry;
+		carry = x[size] / base;
+		x[size++] %= base;
+	}
+	return x;
 }
-
-double Decimal ()
-{
-	char x[99];
-	int m[99], n[99], i, j, k=0, y, k0=0, c;
-	double sum=0;
-	cout<<"\nEnter a number in any number system --> ";
-	cin>>x;
-	while (x[k0]!='\0')
-	{
-		c=x[k0];
-		if (c==46) k++;
-		if (((c<48 || c>58) && (c<65 || c>90) && c!=46) || k>1)
-		{
-			if (c==45) cout<<"Sorry! This app is not prepared for negative numbers!\n";
-			cout<<"Enter a valid number using only numbers and capital letters --> ";
-			cin>>x;
-			k0=0;
+//	Multiplies a string (x) by a number (y) in base 10
+string mul(const string &x, long long y) {
+	unsigned int size = x.size(), carry = 0, shift = 0;
+	long long tmp;
+	string ret;
+	while (y) {
+		unsigned int i, z = y % 10;
+		for (i = 0; i < size; i++) {
+			while (ret.size() <= i + shift)
+				ret += char(0);
+			tmp = ret[i + shift] + x[i] * z + carry;
+			carry = tmp / 10;
+			ret[i + shift] = tmp % 10;
+		}
+		while (carry) {
+			while (i + shift >= ret.size())
+				ret += char(0);
+			tmp = ret[i + shift] + carry;
+			carry = tmp / 10;
+			ret[i++ + shift] = tmp % 10;
+		}
+		y /= 10;
+		shift++;
+	}
+	return ret;
+}
+//	Multiplies two strings (x & y) in base 10
+string mul_string(const string &x, const string &y) {
+	unsigned int size = x.size(), carry = 0, shift = 0, m = y.size();
+	long long tmp;
+	string ret;
+	while (shift < m) {
+		unsigned int i, z = y[shift];
+		for (i = 0; i < size; i++) {
+			while (ret.size() <= i + shift)
+				ret += char(0);
+			tmp = ret[i + shift] + x[i] * z + carry;
+			carry = tmp / 10;
+			ret[i + shift] = tmp % 10;
+		}
+		while (carry) {
+			while (i + shift >= ret.size())
+				ret += char(0);
+			tmp = ret[i + shift] + carry;
+			carry = tmp / 10;
+			ret[i++ + shift] = tmp % 10;
+		}
+		shift++;
+	}
+	return ret;
+}
+//	Converts the integer part of a decimal string (x) to a string in base (to)
+string dvd_rem(string x, const long long &to) {
+	unsigned int size;
+	long long tmp;
+	string ret;
+	while (!x.empty()) {
+		size = x.size();
+		tmp = 0;
+		for (int i = size - 1; i >= 0; i--) {
+			tmp = tmp * 10 + x[i];
+			x[i] = tmp / to;
+			tmp %= to;
+		}
+		ret += char(tmp);
+		while (!x.empty() && !x.back())
+			x.pop_back();
+	}
+	while (!ret.empty() && !ret.back())
+		ret.pop_back();
+	if (ret.empty())
+		ret += char(0);
+	return ret;
+}
+//	Converts the fractional part of a decimal (x) to a string in base (to)
+//	with at most a specific number of base places (fraction_printing) using rounding to
+//	(fraction_printing) base places
+//	Rounding may also be caused by the long double type itself
+//	If the rounding is to cause an increase in the integer part of the number, the variable
+//	(integer_round) counts it
+string mul_rem(long double x, const long long &to, const int &fraction_printing,
+		int &integer_round) {
+	int tmp;
+	string ret;
+	if (x >= 1) {
+		integer_round++;
+		x--;
+	}
+	while ((int) ret.size() < fraction_printing) {
+		x *= to;
+		tmp = floor(x);
+		ret += char(tmp);
+		x -= tmp;
+	}
+	if (floor(x * to) > to / 2) {
+		reverse(ret.begin(), ret.end());
+		tmp = ret.size();
+		ret = add(ret, string(1, 1), to);
+		if ((int) ret.size() > tmp) {
+			integer_round++;
+			ret.pop_back();
+		}
+		reverse(ret.begin(), ret.end());
+	}
+	while (!ret.empty() && !ret.back())
+		ret.pop_back();
+	return ret;
+}
+//	Prints a number after reversing it if needed
+void print(string x, bool r = 0) {
+	if (r)
+		reverse(x.begin(), x.end());
+	for (char &c : x)
+		if (c < 10)
+			c += '0';
+		else
+			c += 'A' - 10;
+	cout << x;
+}
+//	Ask the user if he wants to end the program after the current conversion
+char anotherIteration() {
+	char again;
+	cout << "\n\nDo you want another conversion? (y/n): " << flush;
+	cin >> again;
+	return again;
+}
+int main() {
+	cout << "*****Start of Program*****\n" << endl;
+	char again;
+	do {
+		cout << "Enter the number you want to convert:\n\t" << flush;
+		string num;
+		cin >> num;
+		int size = num.size();
+		int base_point = size;
+		//	Determining the location of the base point and preparing the string number
+		for (int i = 0; i < size; i++)
+			if (num[i] != '.') {
+				if (num[i] <= '9')
+					num[i] -= '0';
+				else
+					num[i] -= 'A' - 10;
+			} else
+				base_point = i;
+		cout << "Enter the base of the number: " << flush;
+		int from;
+		cin >> from;
+		cout << "Enter the target base: " << flush;
+		int to;
+		cin >> to;
+		//	Checking for the validity of the input
+		if (from > 36 || to > 36) {
+			cout << "This program is limited to base conversions of at most 36"
+					<< endl;
+			again = anotherIteration();
 			continue;
 		}
-		k0++;
-	}
-	cout<<"\nEnter the base number you want to convert from --> ";
-	cin>>y;
-	for (i=0;i<99;i++)
-	{
-		if (x[i]=='\0' || x[i]=='.')
-		{
-			i--;
-			break;
-		}
-		m[i]=numbers (x[i]);
-	}
-	k=i+2; k0=0;
-	while (k0<=i)
-	{
-		if (m[k0]>=y)
-		{
-			cout<<"Enter a valid base number --> ";
-			cin>>y;
-			k0=0;
+		bool ok = 1;
+		for (const char &c : num)
+			if (c != '.' && (c >= from || c < 0)) {
+				cout << "Not a valid number" << endl;
+				ok = 0;
+				break;
+			}
+		if (!ok) {
+			again = anotherIteration();
 			continue;
 		}
-		k0++;
-	}
-	k0=0;
-	if (x[i+1]=='.' && x[i+2]!='\0')
-	{
-		for (j=1;x[k]!='\0';j++)
-		{
-			n[j-1]=numbers (x[k]);
-			k++;
-		}
-		j--;
-		while (k0<=j-1)
-		{
-			if (n[k0]>=y)
-			{
-				cout<<"Enter a valid base number --> ";
-				cin>>y;
-				k0=0;
+		string integer, tmp(1, 1), fraction_string;
+		//	Converting the integer part
+		for (int i = base_point - 1; i >= 0; i--, tmp = mul(tmp, from))
+			integer = add(integer, mul_string(string(1, num[i]), tmp));
+		integer = dvd_rem(integer, to);
+		if (base_point < size) {
+			cout << "Enter the number of base places needed: " << flush;
+			int fraction_printing;
+			cin >> fraction_printing;
+			//	Checking the validity for the number of base places
+			if (fraction_printing < 0) {
+				cout << "Number of base places should be non-negative" << endl;
+				again = anotherIteration();
 				continue;
 			}
-			k0++;
+			long double tmp = 1.0 / from, fraction = 0;
+			//	Converting the fractional part
+			for (int i = base_point + 1; i < size; i++, tmp /= from)
+				fraction += num[i] * tmp;
+			int integer_round = 0;
+			fraction_string = mul_rem(fraction, to, fraction_printing,
+					integer_round);
+			while (integer_round--)
+				integer = add(integer, string(1, 1), to);
+			if (fraction_printing)
+				fraction_string += string(
+						fraction_printing - fraction_string.size(), 0);
 		}
-	}
-	cout<<"\nEnter the base number you want to convert to --> ";
-	cin>>ct;
-	while (ct<2 || ct==y)
-	{
-		if (ct==y) cout<<"That's nonsense:\nYour number equals itself in the same number system!\nEnter another valid base number --> ";
-		else cout<<"Enter a valid base number --> ";
-		cin>>ct;
-	}
-	if (x[i+1]=='.' && x[i+2]!='\0') for (j;j>0;j--)
-		sum+=n[j-1]*pow(y,-j);
-	k=i;
-	for (i;i>=0;i--)
-		sum+=m[i]*pow(y,k-i);
-	return sum;
-}
-
-int numbers (char a)
-{
-	int c;
-	switch (a)
-	{
-		case '0':
-		case '1':
-		case '2':
-		case '3':
-		case '4':
-		case '5':
-		case '6':
-		case '7':
-		case '8':
-		case '9':
-			c=a-48;
-			break;
-		default:
-			c=a-55;
-	}
-	return c;
-}
-
-void NonDecimal (double x, int y)
-{
-	double x2;
-	int r[99999], i, x1, k, m[R], X;
-		X=0;
-		//if (x<0) x=-x;
-		x1=x;
-		x2=x-x1;
-		for (i=0; x1>0; i++)
-		{
-			r[i]=x1%y;
-			x1/=y;
+		cout << "The converted number is: " << endl;
+		print(integer, 1);
+		if (!fraction_string.empty()) {
+			cout << '.';
+			print(fraction_string);
 		}
-		for (k=0; x2<0 || k<R; k++)
-		{
-			m[k]=x2*y;
-			x2=x2*y-m[k];
-		}
-		i--; k--;
-		cout<<endl<<"\nYour number equals";
-		cout<<endl<<'[';
-		//if (s<0) cout<<'1';
-		result (i, r, k, m, X);
-		if (x==0) cout<<'0';
-		cout<<']';
-		cout<<" in ";
-		number_sys (y);
-		//if (s<0) cout<<" in sign and magnitude form";
-		if (X) cout<<"\n\nNote:\n\tNumbers between circular brackets  (_) couldn't be written using letters";
-	return;
-}
-
-void result (int i, int r[], int k, int m[], int &X)
-{
-	for (i; i>=0; i--)
-		numbers (i, r, X);
-	cout<<'.';
-	for (k=0; k<R; k++)
-		numbers (k, m, X);
-	int q=R-1;
-	while (m[q]==0 && q>-1)
-	{
-		cout<<'\b';
-		q--;
-	}
-	if (q==-1) cout<<'\b';
-	return;
-}
-
-void numbers (int b, int a[], int &X)
-{
-	if (a[b]>=10 && a[b]<=35) 
-	{
-		char c;
-		c='A'+a[b]-10;
-		cout<<c;
-	}
-	else if (a[b]<10) cout<<a[b];
-	else
-	{
-		cout<<'('<<a[b]<<')';
-		X++;
-	}
-	return;
-}
-
-void number_sys (int y)
-{
-	switch (y)
-	{
-		case 2:
-			cout<<"binary";
-			break;
-		case 8:
-			cout<<"octal";
-			break;
-		case 10:
-			cout<<"decimal";
-			break;
-		case 16:
-			cout<<"hexadecimal";
-			break;
-		default:
-			switch (y%10)
-			{
-				case 1:
-					cout<<y<<"st";
-					break;
-				case 2:
-					cout<<y<<"nd";
-					break;
-				case 3:
-					cout<<y<<"rd";
-					break;
-				default:
-					cout<<y<<"th";
-			}
-	}
-	cout<<" number system";
-	return;
+		cout << endl;
+		again = anotherIteration();
+	} while (again == 'y');
+	cout << "\n*****End of program*****" << endl;
+	return 0;
 }
